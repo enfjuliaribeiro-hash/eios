@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitorização EIOS - CIEVS Contagem</title>
+    <link rel="icon" type="image/jpeg" href="LOGO RADAR CIEVS.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos adicionais simples para animações e utilitários */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Cabeçalho -->
+        <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-slate-100 flex-shrink-0 bg-black flex items-center justify-center">
+                    <img src="LOGO RADAR CIEVS.jpg" alt="Logo Radar CIEVS" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=CIEVS&background=2563eb&color=fff';">
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitorização EIOS</h1>
+                    <p class="text-slate-500 font-medium">CIEVS Contagem • Triagem Epidemiológica Inteligente</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 md:mt-0 w-full md:w-auto">
+                <button id="btn-fetch" class="w-full md:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-200">
+                    <svg id="icon-refresh" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <svg id="icon-loading" class="hidden animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    <span id="btn-text">Procurar Notícias EIOS</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Configuração do Feed -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+            <label class="flex items-center text-sm font-semibold text-slate-700 mb-2">
+                <!-- Ícone Link -->
+                <svg class="w-4 h-4 mr-2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Ligação do RSS (EIOS ou outra fonte compatível)
+            </label>
+            <input type="url" id="input-rss" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Cole a URL do Feed RSS aqui...">
+        </div>
+
+        <!-- Mensagens de Status (Ocultas por defeito) -->
+        <div id="status-container" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl flex items-center space-x-3 animate-pulse">
+            <svg class="w-5 h-5 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <span id="status-msg" class="font-medium">A processar...</span>
+        </div>
+
+        <div id="error-container" class="hidden bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl flex items-start space-x-3 shadow-sm">
+            <svg class="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <div>
+                <h3 class="font-bold">Falha na Pesquisa</h3>
+                <span id="error-msg" class="font-medium text-sm mt-1 block"></span>
+            </div>
+        </div>
+
+        <!-- Estado Inicial -->
+        <div id="empty-state" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <h2 class="text-xl font-semibold text-slate-700 mb-2">Painel Pronto para Uso</h2>
+            <p class="max-w-md mx-auto">Clique no botão "Procurar Notícias EIOS" acima para carregar, traduzir e classificar os rumores das últimas horas utilizando Inteligência Artificial.</p>
+        </div>
+
+        <!-- Dashboard de Estatísticas (Oculto por defeito) -->
+        <div id="stats-dashboard" class="hidden grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <span class="text-slate-500 font-medium text-sm">Total Analisadas</span>
+                <span id="stat-total" class="text-3xl font-bold text-slate-800 mt-1">0</span>
+            </div>
+            <div class="bg-red-50 p-5 rounded-2xl shadow-sm border border-red-100 flex flex-col">
+                <span class="text-red-600 font-medium text-sm flex items-center"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Risco Alto</span>
+                <span id="stat-alta" class="text-3xl font-bold text-red-800 mt-1">0</span>
+            </div>
+            <div class="bg-yellow-50 p-5 rounded-2xl shadow-sm border border-yellow-100 flex flex-col">
+                <span class="text-yellow-600 font-medium text-sm flex items-center"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Risco Médio</span>
+                <span id="stat-media" class="text-3xl font-bold text-yellow-800 mt-1">0</span>
+            </div>
+            <div class="bg-slate-100 p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <span class="text-slate-600 font-medium text-sm flex items-center"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> Risco Baixo</span>
+                <span id="stat-baixa" class="text-3xl font-bold text-slate-800 mt-1">0</span>
+            </div>
+        </div>
+
+        <!-- Área da Tabela (Oculta por defeito) -->
+        <div id="table-area" class="hidden space-y-3">
+            <div class="flex justify-end">
+                <button id="btn-export" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>Exportar Planilha (Excel)</span>
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse border-slate-300">
+                        <thead>
+                            <tr class="bg-slate-100 text-sm uppercase tracking-wider text-slate-600 font-bold select-none">
+                                <th class="p-3 border border-slate-300 w-32 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="relevancia">
+                                    <div class="flex items-center justify-between">Relevância <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                </th>
+                                <th class="p-3 border border-slate-300 w-40 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="classificacao_dae">
+                                    <div class="flex items-center justify-between">Classificação DAE <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                </th>
+                                <th class="p-3 border border-slate-300 min-w-[300px] cursor-pointer hover:bg-slate-200 transition-colors" data-sort="titulo_pt">
+                                    <div class="flex items-center justify-between">Evento / Rumor <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                </th>
+                                <th class="p-3 border border-slate-300 w-64 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="pais">
+                                    <div class="flex items-center justify-between">Localização <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                </th>
+                                <th class="p-3 border border-slate-300 w-32 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="timestamp">
+                                    <div class="flex items-center justify-between">Data <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                </th>
+                                <th class="p-3 border border-slate-300 w-16 text-center">Fonte</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-slate-200 text-sm">
+                            <!-- As linhas serão injetadas aqui por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script de Lógica -->
+    <script>
+        // --- CONFIGURAÇÕES GERAIS ---
+        const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
+        const CHUNK_SIZE = 25; // Quantidade de notícias processadas por vez (lote) pela IA
+        const apiKey = ""; // A chave é injetada pelo ambiente, manter vazia
+
+        // Estado Global
+        let globalNoticias = [];
+        let sortColumn = 'relevancia';
+        let sortDirection = 'asc';
+
+        // Elementos do DOM
+        const inputRss = document.getElementById('input-rss');
+        const btnFetch = document.getElementById('btn-fetch');
+        const btnExport = document.getElementById('btn-export');
+        const btnText = document.getElementById('btn-text');
+        const iconRefresh = document.getElementById('icon-refresh');
+        const iconLoading = document.getElementById('icon-loading');
+        
+        const statusContainer = document.getElementById('status-container');
+        const statusMsg = document.getElementById('status-msg');
+        const errorContainer = document.getElementById('error-container');
+        const errorMsg = document.getElementById('error-msg');
+        const emptyState = document.getElementById('empty-state');
+        
+        const statsDashboard = document.getElementById('stats-dashboard');
+        const tableArea = document.getElementById('table-area');
+        const tableBody = document.getElementById('table-body');
+
+        // Inicializar
+        inputRss.value = DEFAULT_RSS_URL;
+
+        // Funções de Interface (UI)
+        function setUILoading(isLoading) {
+            btnFetch.disabled = isLoading;
+            if (isLoading) {
+                btnText.textContent = 'A processar...';
+                iconRefresh.classList.add('hidden');
+                iconLoading.classList.remove('hidden');
+                statusContainer.classList.remove('hidden');
+                errorContainer.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                // Mantemos os dados visíveis se já existirem
+            } else {
+                btnText.textContent = 'Procurar Notícias EIOS';
+                iconRefresh.classList.remove('hidden');
+                iconLoading.classList.add('hidden');
+                statusContainer.classList.add('hidden');
+            }
+        }
+
+        function updateStatus(msg) {
+            statusMsg.textContent = msg;
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorContainer.classList.remove('hidden');
+            statusContainer.classList.add('hidden');
+            if (globalNoticias.length === 0) {
+                emptyState.classList.remove('hidden');
+            }
+        }
+
+        // Função Principal de Busca
+        async function fetchEIOSData() {
+            const urlFeed = inputRss.value.trim();
+            if (!urlFeed) return;
+
+            setUILoading(true);
+            
+            try {
+                updateStatus('A procurar dados no EIOS...');
+                let xmlText = '';
+                
+                const proxies = [
+                    `https://api.allorigins.win/raw?url=${encodeURIComponent(urlFeed)}`,
+                    `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(urlFeed)}`,
+                    `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(urlFeed)}`,
+                    urlFeed
+                ];
+
+                for (const url of proxies) {
+                    try {
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            xmlText = await response.text();
+                            break;
+                        }
+                    } catch (e) {
+                        console.warn(`Tentativa de proxy falhou para: ${url}`, e);
+                    }
+                }
+
+                if (!xmlText) {
+                    throw new Error("Não foi possível aceder ao feed. Os servidores proxy estão bloqueados ou a ligação está inacessível no momento.");
+                }
+
+                updateStatus('A ler formato XML...');
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const items = Array.from(xmlDoc.querySelectorAll("item, entry"));
+                
+                if (items.length === 0) {
+                    throw new Error("Nenhum item encontrado no XML recebido. A ligação pode ser inválida ou o formato não é reconhecido.");
+                }
+
+                updateStatus('A remover duplicados...');
+                const uniqueItems = [];
+                const titulosVistos = new Set();
+                
+                for (const item of items) {
+                    const titleNode = item.querySelector("title");
+                    const title = titleNode ? titleNode.textContent : "Sem Título";
+                    
+                    const linkNode = item.querySelector("link");
+                    const link = linkNode ? (linkNode.textContent || linkNode.getAttribute("href") || "") : "";
+                    
+                    const dateNode = item.querySelector("pubDate, updated, published");
+                    const pubDate = dateNode ? dateNode.textContent : new Date().toISOString();
+                    
+                    const descNode = item.querySelector("description, summary, content");
+                    const description = descNode ? descNode.textContent : "";
+                    
+                    const cleanDesc = description.replace(/(<([^>]+)>)/gi, "").substring(0, 500);
+
+                    if (!titulosVistos.has(title)) {
+                        titulosVistos.add(title);
+                        uniqueItems.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            tituloOriginal: title,
+                            link: link,
+                            data: new Date(pubDate).toLocaleString('pt-PT'),
+                            timestamp: new Date(pubDate).getTime(), // Adicionado para facilitar ordenação de datas
+                            descricaoOriginal: cleanDesc
+                        });
+                    }
+                }
+
+                let resultadosIA = [];
+                
+                // Processamento em Lotes (Chunks) para não sobrecarregar a API com textos gigantes
+                for (let i = 0; i < uniqueItems.length; i += CHUNK_SIZE) {
+                    const lote = uniqueItems.slice(i, i + CHUNK_SIZE);
+                    updateStatus(`A analisar lote ${Math.floor(i/CHUNK_SIZE) + 1} (Notícias ${i + 1} a ${Math.min(i + CHUNK_SIZE, uniqueItems.length)} de ${uniqueItems.length})...`);
+                    
+                    const resultadoLote = await processWithAI(lote);
+                    if (resultadoLote) {
+                        resultadosIA = resultadosIA.concat(resultadoLote);
+                    }
+                }
+                
+                if (resultadosIA.length > 0) {
+                    const noticiasFinais = resultadosIA.map(iaData => {
+                        const original = uniqueItems.find(n => n.id === iaData.id);
+                        return { ...original, ...iaData };
+                    });
+
+                    globalNoticias = noticiasFinais;
+                    
+                    // Ordenação inicial predefinida
+                    sortColumn = 'relevancia';
+                    sortDirection = 'asc';
+                    aplicarOrdenacao();
+                    
+                    updateStatus('Concluído!');
+                } else {
+                    throw new Error("Não foi possível extrair dados da IA após múltiplas tentativas.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                showError(`Erro: ${error.message}`);
+            } finally {
+                setUILoading(false);
+            }
+        }
+
+        // Função para contactar a API do Gemini
+        async function processWithAI(items) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const schema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        id: { type: "STRING" },
+                        titulo_pt: { type: "STRING" },
+                        resumo_pt: { type: "STRING" },
+                        pais: { type: "STRING" },
+                        estado: { type: "STRING" },
+                        municipio: { type: "STRING" },
+                        relevancia: { type: "STRING" },
+                        classificacao_dae: { type: "STRING" }
+                    },
+                    required: ["id", "titulo_pt", "resumo_pt", "pais", "estado", "municipio", "relevancia", "classificacao_dae"]
+                }
+            };
+
+            const promptText = `
+                Você é um especialista em inteligência epidemiológica do CIEVS Contagem, Minas Gerais, Brasil.
+                Sua tarefa é analisar os rumores de saúde listados abaixo e extrair informações em formato JSON.
+                
+                Para cada item:
+                1. Mantenha o "id" idêntico ao fornecido.
+                2. Traduza o título e a descrição para o Português do Brasil de forma clara ("titulo_pt" e "resumo_pt").
+                3. Identifique a localização do evento reportado ("pais", "estado", "municipio"). Se não for possível identificar algum deles, escreva "Não informado".
+                4. Classifique a "relevância" epidemiológica do evento estritamente como "Alta", "Média" ou "Baixa", utilizando EXATAMENTE os seguintes critérios:
+                   
+                   - ALTA Relevância (deve atender a uma das 3 condições abaixo):
+                     1. Menções aos termos MPox, Rubéola, Sarampo, Coqueluche, COVID19, Ebola, Marburg, Hantavirose, Lassa, Febre Amarela, Arenavirus ou Febre Tifoide E ocorrendo na região das Américas.
+                     2. Menções aos termos Arboviroses, Zika, Chikungunya, Oropouche, Nilo Ocidental, Mayaro, Dengue, Ilheus, Escarlatina, Varicela, Mão pé boca, Síndrome Gripal, Síndrome respiratória aguda grave, Influenza, VSR, Rinovírus, Meningite, Raiva humana, Tétano, Poliomielite, Febre maculosa, Leptospirose, Malária ou Botulismo E ocorrendo na Região Metropolitana de Belo Horizonte (RMBH).
+                     3. Menções aos termos "Epidemia" ou "Pandemia" E ocorrendo no Brasil.
+                   
+                   - MÉDIA Relevância (deve atender a uma das 3 condições abaixo):
+                     1. Menções a DDA, Intoxicação alimentar, Hepatite, Cólera, Esporotricose, Chagas, Inundações ou Ondas de calor E ocorrendo na Região Metropolitana de Belo Horizonte (RMBH).
+                     2. Menções aos termos MPox, Rubéola, Sarampo, Coqueluche, COVID19, Ebola, Marburg, Hantavirose, Lassa, Febre Amarela, Arenavirus ou Febre Tifoide E ocorrendo em outros locais do mundo diferente da região das Américas.
+                     3. Menções ao termo "Surto" E ocorrendo no Brasil.
+                   
+                   - BAIXA Relevância:
+                     Qualquer evento que não se enquadre rigorosamente nos critérios de Alta ou Média relevância.
+
+                5. Preencha o campo "classificacao_dae" classificando a Doença, Agravo ou Evento utilizando EXATAMENTE a seguinte lógica:
+                   - ARBOVIROSES: Chikungunya; Dengue; Febre do Mayaro; Febre do Nilo Ocidental; Febre do Oropouche; Vírus Ilhéus; Zika.
+                   - DOENÇAS EXANTEMÁTICAS: Escarlatina; MPox; Rubéola; Sarampo; Varicela; Mão pé Boca.
+                   - DOENÇAS RESPIRATÓRIAS: Coqueluche; COVID19; Síndrome Gripal e SRAG; Influenza e VSR; Difteria.
+                   - DOENÇAS NEURO INVASIVAS: Meningites Virais e Bacterianas; Raiva humana; Tétano; Síndrome da Paralisia Flácida Aguda; Poliomielite por poliovírus selvagem.
+                   - FEBRES HEMORRAGICAS: Febre Maculosa; Leptospirose; Hantavirose; Ebola; Vírus Marburg; Malária; Hepatite (exceto A); Lassa; Febre Amarela; Arenavírus; Febre Tifoide.
+                   - DOENÇAS DE TRANSMISSÃO HÍDRICA E ALIMENTAR: Cólera; Botulismo; DDA; Hepatite A; Intoxicação alimentar (Surto).
+                   - ZOONOSES: Esporotricose; Doença de Chagas Aguda; Acidentes por animais peçonhentos; Peste.
+                   - EVENTOS DE IMPORTÂNCIA EM SAÚDE PÚBLICA: Inundações; Ondas de Calor; Violência sexual e tentativa de suicídio; Surtos gerais.
+                   - OUTROS RUMORES: Tudo o que não se enquadrar nas classificações acima.
+
+                Dados Originais (JSON):
+                ${JSON.stringify(items.map(i => ({ id: i.id, title: i.tituloOriginal, description: i.descricaoOriginal })))}
+            `;
+
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema
+                }
+            };
+
+            const maxRetries = 5;
+            const delays = [1000, 2000, 4000, 8000, 16000];
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!res.ok) throw new Error(`Erro da API: ${res.status}`);
+
+                    const data = await res.json();
+                    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (jsonText) {
+                        return JSON.parse(jsonText);
+                    }
+                } catch (err) {
+                    if (i === maxRetries - 1) {
+                        throw new Error('Erro ao conectar com a IA após várias tentativas.');
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                }
+            }
+            return null;
+        }
+
+        // Função para apresentar os dados na Tabela e Dashboard
+        function renderData() {
+            if (globalNoticias.length === 0) return;
+
+            // Atualiza Ícones de Ordenação
+            document.querySelectorAll('th[data-sort] .sort-icon').forEach(icon => icon.innerHTML = '');
+            const activeTh = document.querySelector(`th[data-sort="${sortColumn}"]`);
+            if (activeTh) {
+                const iconSpan = activeTh.querySelector('.sort-icon');
+                iconSpan.innerHTML = sortDirection === 'asc' ? '&#9650;' : '&#9660;'; // Setas para cima/baixo
+            }
+
+            // Estatísticas
+            const total = globalNoticias.length;
+            const alta = globalNoticias.filter(n => n.relevancia === 'Alta').length;
+            const media = globalNoticias.filter(n => n.relevancia === 'Média').length;
+            const baixa = globalNoticias.filter(n => n.relevancia === 'Baixa').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-alta').textContent = alta;
+            document.getElementById('stat-media').textContent = media;
+            document.getElementById('stat-baixa').textContent = baixa;
+
+            // Construir Tabela
+            tableBody.innerHTML = '';
+            
+            globalNoticias.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-blue-50 transition-colors group';
+
+                // Helper para o Badge
+                let badgeHtml = '';
+                if (item.relevancia === 'Alta') {
+                    badgeHtml = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800 border border-red-200"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Alta</span>`;
+                } else if (item.relevancia === 'Média') {
+                    badgeHtml = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Média</span>`;
+                } else {
+                    badgeHtml = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-800 border border-slate-200"><svg class="w-4 h-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> Baixa</span>`;
+                }
+
+                // Helper para a Localização
+                let locationHtml = `
+                    <span class="flex items-start text-slate-800 font-medium">
+                        <svg class="w-3.5 h-3.5 mr-1.5 text-blue-500 mt-0.5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        ${escapeHtml(item.pais)}
+                    </span>
+                `;
+                
+                if (item.estado !== 'Não informado' || item.municipio !== 'Não informado') {
+                    const est = item.estado !== 'Não informado' ? item.estado : '';
+                    const mun = item.municipio !== 'Não informado' ? item.municipio : '';
+                    const sep = (est && mun) ? ' / ' : '';
+                    locationHtml += `<span class="text-slate-500 pl-5 text-xs block mt-1">${escapeHtml(est)}${sep}${escapeHtml(mun)}</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="p-3 border border-slate-200 align-top">${badgeHtml}</td>
+                    <td class="p-3 border border-slate-200 align-top">
+                        <span class="inline-flex px-2 py-1 bg-blue-50 text-blue-800 text-xs font-bold rounded border border-blue-200 shadow-sm">${escapeHtml(item.classificacao_dae)}</span>
+                    </td>
+                    <td class="p-3 border border-slate-200 align-top">
+                        <h3 class="font-bold text-slate-900 mb-1">${escapeHtml(item.titulo_pt)}</h3>
+                        <p class="text-slate-600 line-clamp-2">${escapeHtml(item.resumo_pt)}</p>
+                    </td>
+                    <td class="p-3 border border-slate-200 align-top">
+                        <div class="flex flex-col space-y-1">${locationHtml}</div>
+                    </td>
+                    <td class="p-3 border border-slate-200 align-top text-slate-600 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <svg class="w-3.5 h-3.5 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                            ${item.data.split(',')[0]}
+                        </div>
+                    </td>
+                    <td class="p-3 border border-slate-200 align-top text-center bg-slate-50">
+                        <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="inline-flex p-2 bg-white border border-slate-300 hover:border-blue-400 hover:text-blue-600 text-slate-500 rounded-md shadow-sm transition-all" title="Abrir Notícia no EIOS">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                        </a>
+                    </td>
+                `;
+                
+                tableBody.appendChild(tr);
+            });
+
+            emptyState.classList.add('hidden');
+            statsDashboard.classList.remove('hidden');
+            tableArea.classList.remove('hidden');
+        }
+
+        // Função de Exportação para CSV
+        function exportarParaCSV() {
+            if (globalNoticias.length === 0) return;
+
+            const colunas = ['Relevancia', 'Classificacao DAE', 'Titulo Traduzido', 'Resumo', 'Pais', 'Estado', 'Municipio', 'Data de Publicacao', 'Link Original'];
+            const linhasCsv = [colunas.join(';')];
+
+            globalNoticias.forEach(item => {
+                const linha = [
+                    `"${item.relevancia}"`,
+                    `"${item.classificacao_dae}"`,
+                    `"${item.titulo_pt.replace(/"/g, '""')}"`,
+                    `"${item.resumo_pt.replace(/"/g, '""')}"`,
+                    `"${item.pais}"`,
+                    `"${item.estado}"`,
+                    `"${item.municipio}"`,
+                    `"${item.data}"`,
+                    `"${item.link}"`
+                ];
+                linhasCsv.push(linha.join(';'));
+            });
+
+            const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + linhasCsv.join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Triagem_EIOS_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Helper para evitar problemas de HTML tags nas strings
+        function escapeHtml(unsafe) {
+            return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Funções de Ordenação (Filtro)
+        function handleSortClick(e) {
+            const th = e.currentTarget;
+            const column = th.getAttribute('data-sort');
+            
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'; // Inverte se clicar na mesma
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc'; // Padrão crescente para nova coluna
+            }
+            
+            aplicarOrdenacao();
+        }
+
+        function aplicarOrdenacao() {
+            globalNoticias.sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
+
+                // Lógica especial para Relevância (Risco)
+                if (sortColumn === 'relevancia') {
+                    const ordem = { "Alta": 1, "Média": 2, "Baixa": 3 };
+                    valA = ordem[valA] || 4;
+                    valB = ordem[valB] || 4;
+                } 
+                // Lógica especial para textos alfabéticos
+                else if (['titulo_pt', 'classificacao_dae', 'pais'].includes(sortColumn)) {
+                    valA = (valA || '').toLowerCase();
+                    valB = (valB || '').toLowerCase();
+                }
+                // Para timestamp (Data), a comparação numérica padrão já funciona
+                
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderData();
+        }
+
+        // Event Listeners
+        btnFetch.addEventListener('click', fetchEIOSData);
+        btnExport.addEventListener('click', exportarParaCSV);
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', handleSortClick);
+        });
+
+    </script>
+</body>
+</html>
