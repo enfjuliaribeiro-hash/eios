@@ -151,7 +151,8 @@
     <script>
         // --- CONFIGURAÇÕES GERAIS ---
         const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
-        const CHUNK_SIZE = 10; // Lote seguro para processamento rápido e evitar 'High Demand'
+        // Aumentámos para 40 para reduzir a quantidade de consultas à API e fugir do Erro 429
+        const CHUNK_SIZE = 40; 
 
         // Estado Global
         let globalNoticias = [];
@@ -160,7 +161,7 @@
 
         // Elementos do DOM
         const inputRss = document.getElementById('input-rss');
-        const inputApiKey = document.getElementById('input-api-key'); // Recuperado
+        const inputApiKey = document.getElementById('input-api-key');
         const btnFetch = document.getElementById('btn-fetch');
         const btnExport = document.getElementById('btn-export');
         const btnText = document.getElementById('btn-text');
@@ -357,7 +358,9 @@
                     }
 
                     if (i + CHUNK_SIZE < uniqueItems.length) {
-                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        // Aumentámos a pausa entre pedidos para 6 segundos para não ultrapassar limites
+                        updateStatus(`Pausa de segurança de 6s para proteger os limites da sua conta Google...`);
+                        await new Promise(resolve => setTimeout(resolve, 6000));
                     }
                 }
                 
@@ -410,7 +413,7 @@
 
                 Para cada item:
                 1. Mantenha o "id" idêntico ao fornecido.
-                2. Traduza o título e a descrição para o Português do Brasil de forma clara ("titulo_pt" e "resumo_pt").
+                2. Traduza o título e crie um resumo curto e direto em Português do Brasil (MÁXIMO 2 FRASES, SEJA MUITO RESUMIDO) para o campo "resumo_pt".
                 3. Identifique a localização do evento reportado ("pais", "estado", "municipio"). Se não for possível identificar algum deles, escreva "Não informado".
                 4. Classifique a "relevância" epidemiológica do evento estritamente como "Alta", "Média" ou "Baixa", utilizando EXATAMENTE os seguintes critérios:
                    
@@ -475,7 +478,7 @@
                             throw new Error(`[ALTA DEMANDA] A Google está sobrecarregada. A aguardar...`);
                         }
                         if (res.status === 429) {
-                            throw new Error(`[LIMITE] A Google bloqueou temporariamente por excesso de consultas. A aguardar...`);
+                            throw new Error(`[LIMITE] A Google bloqueou temporariamente por excesso de consultas. A aguardar 30s...`);
                         }
                         if ([400, 401, 403, 404].includes(res.status)) {
                             throw new Error(`[ERRO FATAL] Recusa da Google: ${errMsg}`);
@@ -507,7 +510,11 @@
                     
                     if (attempt < maxRetries - 1) {
                         let waitTime = delays[attempt];
-                        if (err.message.includes('[ALTA DEMANDA]') || err.message.includes('[LIMITE]')) {
+                        // Se atingir o limite de quota da Google, forçamos o sistema a esperar 30 segundos (muito seguro)
+                        if (err.message.includes('[LIMITE]')) {
+                            waitTime = 30000;
+                            updateStatus(`Lote ${loteIndex}: Limite de conta Google atingido. A pausar durante 30 segundos para recuperar...`);
+                        } else if (err.message.includes('[ALTA DEMANDA]')) {
                             waitTime = 10000;
                             updateStatus(`Lote ${loteIndex}: Os servidores da Google estão ocupados. A pausar 10 segundos...`);
                         }
