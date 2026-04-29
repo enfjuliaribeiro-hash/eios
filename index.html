@@ -136,8 +136,9 @@
     <script>
         // --- CONFIGURAÇÕES GERAIS ---
         const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
-        const CHUNK_SIZE = 25; 
-        const API_KEY = 'AIzaSyDgmvXqapBweKgeD8bi9A9y1Qa4xfJm-4U'; // Chave fixa adicionada
+        // Reduzimos o tamanho do lote para evitar limites de token e sobrecarga da IA
+        const CHUNK_SIZE = 15; 
+        const API_KEY = 'AIzaSyDgmvXqapBweKgeD8bi9A9y1Qa4xfJm-4U';
 
         // Estado Global
         let globalNoticias = [];
@@ -278,7 +279,6 @@
                     const lote = uniqueItems.slice(i, i + CHUNK_SIZE);
                     updateStatus(`A analisar lote ${Math.floor(i/CHUNK_SIZE) + 1} (Notícias ${i + 1} a ${Math.min(i + CHUNK_SIZE, uniqueItems.length)} de ${uniqueItems.length})...`);
                     
-                    // Passar a API_KEY fixa para a função da IA
                     const resultadoLote = await processWithAI(lote, API_KEY);
                     if (resultadoLote) {
                         resultadosIA = resultadosIA.concat(resultadoLote);
@@ -299,7 +299,7 @@
                     
                     updateStatus('Concluído!');
                 } else {
-                    throw new Error("Não foi possível extrair dados da IA após múltiplas tentativas. Verifique se a sua Chave de API é válida.");
+                    throw new Error("Não foi possível extrair dados da IA.");
                 }
 
             } catch (error) {
@@ -312,25 +312,32 @@
 
         // Função para contactar a API do Gemini
         async function processWithAI(items, key) {
-            // URL a usar a chave inserida pelo utilizador
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+            // MUDANÇA: Atualizado para o modelo 1.5-flash, que é garantido e altamente estável
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
 
+            // MUDANÇA: Estrutura segura do Schema (A Google prefere raiz em formato OBJECT)
             const schema = {
-                type: "ARRAY",
-                items: {
-                    type: "OBJECT",
-                    properties: {
-                        id: { type: "STRING" },
-                        titulo_pt: { type: "STRING" },
-                        resumo_pt: { type: "STRING" },
-                        pais: { type: "STRING" },
-                        estado: { type: "STRING" },
-                        municipio: { type: "STRING" },
-                        relevancia: { type: "STRING" },
-                        classificacao_dae: { type: "STRING" }
-                    },
-                    required: ["id", "titulo_pt", "resumo_pt", "pais", "estado", "municipio", "relevancia", "classificacao_dae"]
-                }
+                type: "OBJECT",
+                properties: {
+                    resultados: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                id: { type: "STRING" },
+                                titulo_pt: { type: "STRING" },
+                                resumo_pt: { type: "STRING" },
+                                pais: { type: "STRING" },
+                                estado: { type: "STRING" },
+                                municipio: { type: "STRING" },
+                                relevancia: { type: "STRING" },
+                                classificacao_dae: { type: "STRING" }
+                            },
+                            required: ["id", "titulo_pt", "resumo_pt", "pais", "estado", "municipio", "relevancia", "classificacao_dae"]
+                        }
+                    }
+                },
+                required: ["resultados"]
             };
 
             const promptText = `
@@ -390,17 +397,36 @@
                         body: JSON.stringify(payload)
                     });
 
-                    if (!res.ok) throw new Error(`Erro da API: ${res.status}`);
+                    // MUDANÇA: Captura de erro robusta e instantânea
+                    if (!res.ok) {
+                        let errorDetails = '';
+                        try {
+                            const errData = await res.json();
+                            errorDetails = errData.error?.message || JSON.stringify(errData);
+                        } catch(e) {}
+                        
+                        // Se o erro for de chave inválida ou pedido rejeitado (400, 401, 403, 404), interrompe tudo na hora!
+                        if ([400, 401, 403, 404].includes(res.status)) {
+                            throw new Error(`[ERRO FATAL DA GOOGLE - Status ${res.status}] ${errorDetails}`);
+                        }
+                        
+                        throw new Error(`Erro temporário da API: ${res.status}`);
+                    }
 
                     const data = await res.json();
                     const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     
                     if (jsonText) {
-                        return JSON.parse(jsonText);
+                        const parsedData = JSON.parse(jsonText);
+                        return parsedData.resultados; // Retorna o array que estava dentro do objecto
                     }
                 } catch (err) {
+                    // Se foi um erro fatal (como erro de chave), lança logo para o ecrã e pára as tentativas
+                    if (err.message.includes('ERRO FATAL')) {
+                        throw err; 
+                    }
                     if (i === maxRetries - 1) {
-                        throw new Error('Erro ao conectar com a IA após várias tentativas.');
+                        throw new Error(`Falha ao conectar com a IA após 5 tentativas: ${err.message}`);
                     }
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 }
@@ -571,5 +597,4 @@
 
     </script>
 </body>
-</html>
 </html>
