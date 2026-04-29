@@ -51,7 +51,7 @@
 
         <!-- Mensagens de Status -->
         <div id="status-container" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl flex items-center space-x-3 animate-pulse">
-            <svg class="w-5 h-5 animate-spin text-blue-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            <svg class="w-5 h-5 animate-spin text-blue-600 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
             <span id="status-msg" class="font-medium">A processar...</span>
         </div>
 
@@ -136,8 +136,7 @@
     <script>
         // --- CONFIGURAÇÕES GERAIS ---
         const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
-        // Reduzimos o tamanho do lote para evitar limites de token e sobrecarga da IA
-        const CHUNK_SIZE = 15; 
+        const CHUNK_SIZE = 40; // Lote maior para reduzir pedidos e evitar bloqueios da Google
         const API_KEY = 'AIzaSyDgmvXqapBweKgeD8bi9A9y1Qa4xfJm-4U';
 
         // Estado Global
@@ -163,10 +162,8 @@
         const tableArea = document.getElementById('table-area');
         const tableBody = document.getElementById('table-body');
 
-        // Inicializar com RSS predefinido
         inputRss.value = DEFAULT_RSS_URL;
 
-        // Funções de Interface (UI)
         function setUILoading(isLoading) {
             btnFetch.disabled = isLoading;
             if (isLoading) {
@@ -197,15 +194,43 @@
             }
         }
 
-        // Função Principal de Busca
+        // Função Autodescoberta: Pergunta à Google qual o modelo suportado pela Chave
+        async function getBestModel(key) {
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    throw new Error(`Chave inválida ou bloqueada: ${data.error.message}`);
+                }
+                
+                if (data.models) {
+                    const available = data.models
+                        .filter(m => m.supportedGenerationMethods.includes("generateContent"))
+                        .map(m => m.name.replace('models/', ''));
+                    
+                    if (available.includes("gemini-1.5-flash")) return "gemini-1.5-flash";
+                    if (available.includes("gemini-1.5-pro")) return "gemini-1.5-pro";
+                    if (available.includes("gemini-pro")) return "gemini-pro";
+                    
+                    return available[0]; // Retorna o primeiro que suportar a geração
+                }
+            } catch(e) {
+                throw new Error("Falha na ligação com a Google: " + e.message);
+            }
+            return "gemini-1.5-flash"; // Segurança extra
+        }
+
         async function fetchEIOSData() {
             const urlFeed = inputRss.value.trim();
-
             if (!urlFeed) return;
 
             setUILoading(true);
             
             try {
+                updateStatus('A verificar ligação com a Google AI...');
+                const modelToUse = await getBestModel(API_KEY);
+                
                 updateStatus('A procurar dados no EIOS...');
                 let xmlText = '';
                 
@@ -223,22 +248,20 @@
                             xmlText = await response.text();
                             break;
                         }
-                    } catch (e) {
-                        console.warn(`Tentativa de proxy falhou para: ${url}`, e);
-                    }
+                    } catch (e) {}
                 }
 
                 if (!xmlText) {
-                    throw new Error("Não foi possível aceder ao feed. Os servidores proxy estão bloqueados ou a ligação está inacessível no momento.");
+                    throw new Error("Não foi possível aceder ao feed. Os servidores proxy estão bloqueados.");
                 }
 
-                updateStatus('A ler formato XML...');
+                updateStatus('A organizar formato XML...');
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, "text/xml");
                 const items = Array.from(xmlDoc.querySelectorAll("item, entry"));
                 
                 if (items.length === 0) {
-                    throw new Error("Nenhum item encontrado no XML recebido. A ligação pode ser inválida ou o formato não é reconhecido.");
+                    throw new Error("Nenhum item encontrado no XML recebido.");
                 }
 
                 updateStatus('A remover duplicados...');
@@ -279,9 +302,18 @@
                     const lote = uniqueItems.slice(i, i + CHUNK_SIZE);
                     updateStatus(`A analisar lote ${Math.floor(i/CHUNK_SIZE) + 1} (Notícias ${i + 1} a ${Math.min(i + CHUNK_SIZE, uniqueItems.length)} de ${uniqueItems.length})...`);
                     
-                    const resultadoLote = await processWithAI(lote, API_KEY);
-                    if (resultadoLote) {
+                    const resultadoLote = await processWithAI(lote, API_KEY, modelToUse);
+                    
+                    if (resultadoLote && Array.isArray(resultadoLote)) {
                         resultadosIA = resultadosIA.concat(resultadoLote);
+                    } else {
+                        throw new Error(`Falha crítica na devolução de dados pela IA no lote ${Math.floor(i/CHUNK_SIZE) + 1}.`);
+                    }
+
+                    // PAUSA DE SEGURANÇA (Para evitar limite 429 da API Gratuita da Google)
+                    if (i + CHUNK_SIZE < uniqueItems.length) {
+                        updateStatus(`Pausa de segurança do lote ${Math.floor(i/CHUNK_SIZE) + 1} para evitar bloqueio da Google...`);
+                        await new Promise(resolve => setTimeout(resolve, 3000)); // Espera 3 segundos
                     }
                 }
                 
@@ -299,20 +331,20 @@
                     
                     updateStatus('Concluído!');
                 } else {
-                    throw new Error("Não foi possível extrair dados da IA.");
+                    throw new Error("Não foi possível extrair dados válidos da IA.");
                 }
 
             } catch (error) {
                 console.error(error);
-                showError(`Erro: ${error.message}`);
+                showError(`${error.message}`);
             } finally {
                 setUILoading(false);
             }
         }
 
-        // Função para contactar a API do Gemini
-        async function processWithAI(items, key) {
-            // Estrutura segura do Schema
+        async function processWithAI(items, key, model) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+
             const schema = {
                 type: "OBJECT",
                 properties: {
@@ -341,7 +373,7 @@
                 Você é um especialista em inteligência epidemiológica do CIEVS Contagem, Minas Gerais, Brasil.
                 Sua tarefa é analisar os rumores de saúde listados abaixo e extrair informações em formato JSON.
                 
-                ATENÇÃO: Responda APENAS com um objeto JSON válido contendo um array chamado "resultados", sem formatação markdown ou texto extra.
+                ATENÇÃO: Responda APENAS com um objeto JSON válido contendo um array chamado "resultados". Não use Markdown.
 
                 Para cada item:
                 1. Mantenha o "id" idêntico ao fornecido.
@@ -379,91 +411,67 @@
 
             const payload = {
                 contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: schema
-                }
+                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
             };
 
+            // Modelos antigos não suportam o schema
+            if (model === 'gemini-pro') {
+                delete payload.generationConfig.responseSchema;
+            }
+
             const maxRetries = 3;
-            const delays = [1000, 2000, 4000];
-            
-            // MUDANÇA: Lista de modelos em cascata (Fallback). Se um modelo der o erro 404, avança para o próximo.
-            const modelsToTry = [
-                'gemini-1.5-flash-latest',
-                'gemini-1.5-pro-latest',
-                'gemini-pro'
-            ];
+            const delays = [2000, 4000, 8000];
+            let lastErrorMsg = "";
 
-            let lastFatalError = "";
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            for (const model of modelsToTry) {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-                
-                // O modelo 'gemini-pro' (versão clássica) não suporta a imposição de Esquema JSON.
-                if (model === 'gemini-pro') {
-                    delete payload.generationConfig.responseSchema;
-                }
-
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!res.ok) {
-                            let errorDetails = '';
-                            try {
-                                const errData = await res.json();
-                                errorDetails = errData.error?.message || JSON.stringify(errData);
-                            } catch(e) {}
-                            
-                            // Se der 404 (modelo não encontrado), sai deste loop de tentativas para avançar para o próximo modelo da lista
-                            if (res.status === 404) {
-                                lastFatalError = `O modelo ${model} não foi encontrado.`;
-                                break; 
-                            }
-
-                            if ([400, 401, 403].includes(res.status)) {
-                                throw new Error(`[ERRO FATAL DA GOOGLE - Status ${res.status}] ${errorDetails}`);
-                            }
-                            
-                            throw new Error(`Erro temporário da API (${res.status}): ${errorDetails}`);
-                        }
-
-                        const data = await res.json();
-                        let jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}));
+                        const errMsg = errData.error?.message || `Status ${res.status}`;
                         
-                        if (jsonText) {
-                            // Limpeza de blocos de Markdown caso o fallback do gemini-pro adicione a sintaxe ```json
-                            if (jsonText.trim().startsWith('```json')) {
-                                jsonText = jsonText.replace(/^```json/, '').replace(/```$/, '').trim();
-                            } else if (jsonText.trim().startsWith('```')) {
-                                jsonText = jsonText.replace(/^```/, '').replace(/```$/, '').trim();
-                            }
-                            
-                            const parsedData = JSON.parse(jsonText);
-                            return parsedData.resultados || parsedData; 
+                        if (res.status === 429) {
+                            throw new Error(`[ERRO FATAL] A Google bloqueou o IP temporariamente por excesso de consultas (Limite de Velocidade). Aguarde um minuto.`);
                         }
-                    } catch (err) {
-                        if (err.message.includes('ERRO FATAL')) {
-                            throw err; 
+                        if ([400, 401, 403, 404].includes(res.status)) {
+                            throw new Error(`[ERRO FATAL] Recusa da Google: ${errMsg}`);
                         }
-                        if (i === maxRetries - 1 && model === modelsToTry[modelsToTry.length - 1]) {
-                            throw new Error(`Falha ao conectar após tentar todos os modelos. Último erro: ${lastFatalError || err.message}`);
-                        }
-                        if (!err.message.includes('Modelo')) {
-                            await new Promise(resolve => setTimeout(resolve, delays[i]));
-                        }
+                        
+                        throw new Error(`Erro temporário: ${errMsg}`);
+                    }
+
+                    const data = await res.json();
+                    let jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (jsonText) {
+                        jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                        const parsedData = JSON.parse(jsonText);
+                        
+                        if (Array.isArray(parsedData)) return parsedData;
+                        if (parsedData.resultados && Array.isArray(parsedData.resultados)) return parsedData.resultados;
+                        
+                        throw new Error("O formato do texto devolvido pela IA está incorreto.");
+                    }
+                    throw new Error("A IA não retornou nenhum texto útil.");
+                    
+                } catch (err) {
+                    lastErrorMsg = err.message;
+                    if (err.message.includes('[ERRO FATAL]')) {
+                        throw new Error(err.message); // Envia o erro diretamente para a tela
+                    }
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delays[i]));
                     }
                 }
             }
-            return null;
+            throw new Error(`Falha repetida na ligação com a IA. Último motivo: ${lastErrorMsg}`);
         }
 
-        // Função para apresentar os dados na Tabela e Dashboard
         function renderData() {
             if (globalNoticias.length === 0) return;
 
@@ -546,7 +554,6 @@
             tableArea.classList.remove('hidden');
         }
 
-        // Função de Exportação para CSV
         function exportarParaCSV() {
             if (globalNoticias.length === 0) return;
 
@@ -626,4 +633,5 @@
 
     </script>
 </body>
+</html>
 </html>
