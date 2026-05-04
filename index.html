@@ -6,6 +6,9 @@
     <title>Monitorização EIOS - CIEVS Contagem</title>
     <link rel="icon" type="image/jpeg" href="LOGO RADAR CIEVS.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Adicionando bibliotecas para exportação em PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
     <style>
         .line-clamp-2 {
             display: -webkit-box;
@@ -27,7 +30,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitorização EIOS</h1>
-                    <p class="text-slate-500 font-medium">CIEVS Contagem • Triagem Epidemiológica Inteligente</p>
+                    <p class="text-slate-500 font-medium">CIEVS Contagem • Triagem e Tradução Local (Sem API)</p>
                 </div>
             </div>
             
@@ -40,28 +43,13 @@
             </div>
         </header>
 
-        <!-- Configurações (RSS e API Key Segura) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Feed RSS -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                <label class="flex items-center text-sm font-semibold text-slate-700 mb-2">
-                    <svg class="w-4 h-4 mr-2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                    Ligação do RSS (EIOS)
-                </label>
-                <input type="url" id="input-rss" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Cole a URL do Feed RSS aqui...">
-            </div>
-
-            <!-- Chave de API Segura -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                <label class="flex items-center justify-between text-sm font-semibold text-slate-700 mb-2">
-                    <span class="flex items-center">
-                        <svg class="w-4 h-4 mr-2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Chave da API (Google Gemini)
-                    </span>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline">Obter nova chave</a>
-                </label>
-                <input type="password" id="input-api-key" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Cole a sua nova chave aqui (será guardada)">
-            </div>
+        <!-- Configurações (Apenas RSS, Sem API Key) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+            <label class="flex items-center text-sm font-semibold text-slate-700 mb-2">
+                <svg class="w-4 h-4 mr-2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Ligação do RSS (EIOS)
+            </label>
+            <input type="url" id="input-rss" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" placeholder="Cole a URL do Feed RSS aqui...">
         </div>
 
         <!-- Mensagens de Status -->
@@ -81,8 +69,8 @@
         <!-- Estado Inicial -->
         <div id="empty-state" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            <h2 class="text-xl font-semibold text-slate-700 mb-2">Painel Pronto para Uso</h2>
-            <p class="max-w-md mx-auto">Certifique-se de que a sua Chave da API está inserida, e clique no botão "Procurar Notícias EIOS" acima para iniciar a triagem.</p>
+            <h2 class="text-xl font-semibold text-slate-700 mb-2">Sistema Offline Ativado</h2>
+            <p class="max-w-md mx-auto">Clique no botão "Procurar Notícias EIOS" acima. O motor interno irá cruzar milhares de palavras-chave instantaneamente para triar os rumores do EIOS.</p>
         </div>
 
         <!-- Dashboard de Estatísticas -->
@@ -107,7 +95,11 @@
 
         <!-- Área da Tabela -->
         <div id="table-area" class="hidden space-y-3">
-            <div class="flex justify-end">
+            <div class="flex justify-end space-x-3">
+                <button id="btn-export-pdf" class="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <span>Exportar PDF</span>
+                </button>
                 <button id="btn-export" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm">
                     <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                     <span>Exportar Planilha (Excel)</span>
@@ -118,21 +110,21 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse border-slate-300">
                         <thead>
-                            <tr class="bg-slate-100 text-sm uppercase tracking-wider text-slate-600 font-bold select-none">
+                            <tr class="bg-slate-100 text-sm uppercase tracking-wider text-slate-600 font-bold select-none text-center">
                                 <th class="p-3 border border-slate-300 w-32 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="relevancia">
-                                    <div class="flex items-center justify-between">Relevância <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Relevância</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 w-40 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="classificacao_dae">
-                                    <div class="flex items-center justify-between">Classificação DAE <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Classificação DAE</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 min-w-[300px] cursor-pointer hover:bg-slate-200 transition-colors" data-sort="titulo_pt">
-                                    <div class="flex items-center justify-between">Evento / Rumor <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Evento / Rumor Original</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 w-64 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="pais">
-                                    <div class="flex items-center justify-between">Localização <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Localização Detectada</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 w-32 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="timestamp">
-                                    <div class="flex items-center justify-between">Data <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Data</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 w-16 text-center">Fonte</th>
                             </tr>
@@ -147,12 +139,10 @@
 
     </div>
 
-    <!-- Script de Lógica -->
+    <!-- Script de Lógica Local (Sem IA/API) -->
     <script>
         // --- CONFIGURAÇÕES GERAIS ---
         const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
-        // Aumentámos para 40 para reduzir a quantidade de consultas à API e fugir do Erro 429
-        const CHUNK_SIZE = 40; 
 
         // Estado Global
         let globalNoticias = [];
@@ -161,9 +151,9 @@
 
         // Elementos do DOM
         const inputRss = document.getElementById('input-rss');
-        const inputApiKey = document.getElementById('input-api-key');
         const btnFetch = document.getElementById('btn-fetch');
         const btnExport = document.getElementById('btn-export');
+        const btnExportPdf = document.getElementById('btn-export-pdf');
         const btnText = document.getElementById('btn-text');
         const iconRefresh = document.getElementById('icon-refresh');
         const iconLoading = document.getElementById('icon-loading');
@@ -179,12 +169,6 @@
         const tableBody = document.getElementById('table-body');
 
         inputRss.value = DEFAULT_RSS_URL;
-        
-        // Recuperar chave guardada no navegador para conveniência
-        const savedKey = localStorage.getItem('cievs_gemini_key');
-        if (savedKey) {
-            inputApiKey.value = savedKey;
-        }
 
         function setUILoading(isLoading) {
             btnFetch.disabled = isLoading;
@@ -218,55 +202,164 @@
             }
         }
 
-        async function getBestModel(key) {
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                const data = await res.json();
-                
-                if (data.error) {
-                    throw new Error(`A sua chave foi bloqueada ou é inválida: ${data.error.message}`);
-                }
-                
-                if (data.models) {
-                    const available = data.models
-                        .filter(m => m.supportedGenerationMethods.includes("generateContent"))
-                        .map(m => m.name.replace('models/', ''));
-                    
-                    if (available.includes("gemini-1.5-flash")) return "gemini-1.5-flash";
-                    if (available.includes("gemini-1.5-pro")) return "gemini-1.5-pro";
-                    if (available.includes("gemini-pro")) return "gemini-pro";
-                    
-                    return available[0]; 
-                }
-            } catch(e) {
-                throw new Error("Falha na ligação com a Google: " + e.message);
-            }
-            return "gemini-1.5-flash"; 
+        // =========================================================================
+        // MOTOR DE TRIAGEM LOCAL E TRADUÇÃO (DICIONÁRIOS E REGEX)
+        // =========================================================================
+
+        // --- PACOTE DE TRADUÇÃO OFFLINE (INGLÊS E ESPANHOL) ---
+        const dicionarioTraducao = [
+            // Doenças Epidemiológicas (Inglês)
+            [/\bmeasles\b/gi, "sarampo"], [/\boutbreak\b/gi, "surto"], [/\bwhooping cough\b/gi, "coqueluche"],
+            [/\bpertussis\b/gi, "coqueluche"], [/\bchickenpox\b/gi, "varicela"], [/\brabies\b/gi, "raiva"],
+            [/\byellow fever\b/gi, "febre amarela"], [/\btyphoid\b/gi, "febre tifoide"], [/\bspotted fever\b/gi, "febre maculosa"],
+            [/\bplague\b/gi, "peste"], [/\bdisease\b/gi, "doença"], [/\billness\b/gi, "doença"], [/\bfever\b/gi, "febre"],
+            [/\bflu\b/gi, "gripe"], [/\bcough\b/gi, "tosse"], [/\bvirus\b/gi, "vírus"], [/\bsyndrome\b/gi, "síndrome"],
+            [/\bmonkeypox\b/gi, "mpox"], [/\bdengue fever\b/gi, "dengue"], [/\bflood\b/gi, "inundação"],
+            [/\bheat wave\b/gi, "onda de calor"], [/\bpoisoning\b/gi, "intoxicação"],
+
+            // Doenças Epidemiológicas (Espanhol/Castelhano)
+            [/\bbrote\b/gi, "surto"], [/\bsarampi[óo]n\b/gi, "sarampo"], [/\btos ferina\b/gi, "coqueluche"],
+            [/\benfermedad\b/gi, "doença"], [/\bfiebre\b/gi, "febre"], [/\bviruela\b/gi, "varíola"],
+            [/\binundaci[óo]n\b/gi, "inundação"],
+
+            // Termos Gerais de Saúde e Notícias (Inglês)
+            [/\bcases\b/gi, "casos"], [/\bcase\b/gi, "caso"], [/\bdeaths?\b/gi, "mortes"], [/\bhealth\b/gi, "saúde"], 
+            [/\bministry\b/gi, "ministério"], [/\bwarning\b/gi, "alerta"], [/\balert\b/gi, "alerta"], 
+            [/\bupdate\b/gi, "atualização"], [/\bconfirmed\b/gi, "confirmado"], [/\bsuspected\b/gi, "suspeito"], 
+            [/\breport\b/gi, "relatório"], [/\bpatients?\b/gi, "pacientes"], [/\bchildren\b/gi, "crianças"], 
+            [/\bpeople\b/gi, "pessoas"], [/\bstate\b/gi, "estado"], [/\bcity\b/gi, "cidade"], 
+            [/\bcountry\b/gi, "país"], [/\bnew\b/gi, "novo"], [/\bfirst\b/gi, "primeiro"], 
+            [/\bspread\b/gi, "propagação"], [/\binfection\b/gi, "infecção"], [/\bvaccine\b/gi, "vacina"], 
+            [/\bvaccination\b/gi, "vacinação"], [/\bpublic\b/gi, "público(a)"], [/\bdepartment\b/gi, "departamento"], 
+            [/\bnumber\b/gi, "número"], [/\bmore\b/gi, "mais"], [/\bhospital\b/gi, "hospital"],
+
+            // Termos Gerais de Saúde e Notícias (Espanhol/Castelhano)
+            [/\bsalud\b/gi, "saúde"], [/\bministerio\b/gi, "ministério"], [/\bconfirmados?\b/gi, "confirmados"],
+            [/\bsospechosos?\b/gi, "suspeitos"], [/\bni[ñn]os\b/gi, "crianças"], [/\bpersonas\b/gi, "pessoas"],
+            [/\bciudad\b/gi, "cidade"], [/\bnuevo\b/gi, "novo"], [/\bprimer\b/gi, "primeiro"],
+            [/\binfecci[óo]n\b/gi, "infecção"], [/\bvacuna\b/gi, "vacina"], [/\bvacunaci[óo]n\b/gi, "vacinação"],
+            [/\bp[úu]blico\b/gi, "público(a)"], [/\bp[úu]blica\b/gi, "pública"], [/\bmuertes?\b/gi, "mortes"],
+            [/\bfallecidos\b/gi, "óbitos"], [/\balerta\b/gi, "alerta"]
+        ];
+
+        // Função para traduzir o texto localmente
+        function traduzirTextoLocal(texto) {
+            if (!texto) return "";
+            let textoTraduzido = texto;
+            
+            dicionarioTraducao.forEach(([regex, substituto]) => {
+                textoTraduzido = textoTraduzido.replace(regex, (match) => {
+                    // Tenta manter a capitalização (Se for "Measles", traduz para "Sarampo")
+                    if (match[0] === match[0].toUpperCase()) {
+                        return substituto.charAt(0).toUpperCase() + substituto.slice(1);
+                    }
+                    return substituto;
+                });
+            });
+            return textoTraduzido;
         }
+
+        // Dicionários Geográficos (Português e Inglês)
+        const dictGeo = {
+            rmbh: /\b(belo horizonte|contagem|betim|nova lima|ribeir[ãa]o das neves|santa luzia|ibirit[ée]|sabar[áa]|vespasiano|rmbh)\b/i,
+            brasil: /\b(brasil|brazil|minas gerais|mg|s[ãa]o paulo|rio de janeiro|bahia|paran[áa]|cear[áa]|pernambuco|rio grande do sul|amazonas)\b/i,
+            americas: /\b(usa|united states|eua|estados unidos|canada|mexico|argentina|colombia|peru|chile|ecuador|equador|bolivia|paraguay|paraguai|uruguay|uruguai|venezuela|america|am[ée]ricas?|haiti|cuba|jamaica|brazil|brasil)\b/i
+        };
+
+        // Dicionários de Doenças por Categoria (Português, Inglês e Sinónimos)
+        const dictDae = {
+            arboviroses: /\b(chikungunya|dengue|mayaro|nilo ocidental|west nile|oropouche|ilh[ée]us|zika)\b/i,
+            exantematicas: /\b(escarlatina|scarlet fever|mpox|monkeypox|rub[ée]ola|rubella|sarampo|measles|varicela|chickenpox|m[ãa]o[- ]p[ée][- ]boca|hfmd)\b/i,
+            respiratorias: /\b(coqueluche|whooping cough|pertussis|covid[- ]?19|coronavirus|s[íi]ndrome gripal|srag|influenza|vsr|rsv|rinov[íi]rus|rhinovirus|difteria|diphtheria)\b/i,
+            neuroinvasivas: /\b(meningite|meningitis|raiva|rabies|t[ée]tano|tetanus|paralisia fl[áa]cida|flaccid paralysis|poliomielite|polio)\b/i,
+            hemorragicas: /\b(febre maculosa|spotted fever|leptospirose|leptospirosis|hantavirose|hantavirus|ebola|marburg|mal[áa]ria|malaria|hepatite|hepatitis|lassa|febre amarela|yellow fever|arenav[íi]rus|arenavirus|febre tifoide|typhoid)\b/i,
+            hidrica: /\b(c[óo]lera|cholera|botulismo|botulism|dda|diarreia|diarrhea|intoxica[çc][ãa]o alimentar|food poisoning)\b/i,
+            zoonoses: /\b(esporotricose|sporotrichosis|chagas|pe[çc]onhentos|venomous|peste|plague)\b/i,
+            eventos: /\b(inunda[çc][ãa]o|enchentes|flood|onda de calor|heat wave|viol[êe]ncia|violence|suic[íi]dio|suicide|surto|outbreak)\b/i
+        };
+
+        const dictTermosAlertas = {
+            epidemia_pandemia: /\b(epidemia|pandemia|epidemic|pandemic)\b/i,
+            surto: /\b(surto|outbreak)\b/i
+        };
+
+        const doençasGrupo1_Alta = /\b(mpox|monkeypox|rub[ée]ola|rubella|sarampo|measles|coqueluche|whooping cough|pertussis|covid[- ]?19|ebola|marburg|hantavirose|hantavirus|lassa|febre amarela|yellow fever|arenav[íi]rus|arenavirus|febre tifoide|typhoid)\b/i;
+        const doençasGrupo4_Media = /\b(dda|diarreia|diarrhea|intoxica[çc][ãa]o alimentar|food poisoning|hepatite|hepatitis|c[óo]lera|cholera|esporotricose|sporotrichosis|chagas|inunda[çc][ãa]o|flood|onda de calor|heat wave)\b/i;
+
+        function classificarNoticiaLocal(title, description) {
+            const text = `${title} ${description}`.toLowerCase();
+            
+            // 1. Deteção Geográfica
+            const isRMBH = dictGeo.rmbh.test(text);
+            const isBrasil = isRMBH || dictGeo.brasil.test(text);
+            const isAmericas = isBrasil || dictGeo.americas.test(text);
+
+            let locStr = "Não informado (Internacional)";
+            if (isRMBH) locStr = "Brasil / Minas Gerais / RMBH (Detectado)";
+            else if (isBrasil) locStr = "Brasil (Detectado)";
+            else if (isAmericas) locStr = "Américas (Detectado)";
+
+            // 2. Classificação DAE
+            let classificacaoDAE = "OUTROS RUMORES";
+            if (dictDae.arboviroses.test(text)) classificacaoDAE = "ARBOVIROSES";
+            else if (dictDae.exantematicas.test(text)) classificacaoDAE = "DOENÇAS EXANTEMÁTICAS";
+            else if (dictDae.respiratorias.test(text)) classificacaoDAE = "DOENÇAS RESPIRATÓRIAS";
+            else if (dictDae.neuroinvasivas.test(text)) classificacaoDAE = "DOENÇAS NEURO INVASIVAS";
+            else if (dictDae.hemorragicas.test(text)) classificacaoDAE = "FEBRES HEMORRAGICAS";
+            else if (dictDae.hidrica.test(text)) classificacaoDAE = "DOENÇAS DE TRANSMISSÃO HÍDRICA E ALIMENTAR";
+            else if (dictDae.zoonoses.test(text)) classificacaoDAE = "ZOONOSES";
+            else if (dictDae.eventos.test(text)) classificacaoDAE = "EVENTOS DE IMPORTÂNCIA EM SAÚDE PÚBLICA";
+
+            // 3. Relevância
+            let relevancia = "Baixa";
+            
+            // Verificações de ALTA Relevância
+            if (doençasGrupo1_Alta.test(text) && isAmericas) {
+                relevancia = "Alta";
+            } else if (classificacaoDAE !== "OUTROS RUMORES" && classificacaoDAE !== "DOENÇAS DE TRANSMISSÃO HÍDRICA E ALIMENTAR" && isRMBH) {
+                // Simplificação segura: Se for doença mapeada e estiver na RMBH, é Alta (exceto as do grupo 4 que são média)
+                if (!doençasGrupo4_Media.test(text)) {
+                    relevancia = "Alta";
+                }
+            } else if (dictTermosAlertas.epidemia_pandemia.test(text) && isBrasil) {
+                relevancia = "Alta";
+            }
+            
+            // Verificações de MÉDIA Relevância (se não for Alta)
+            if (relevancia !== "Alta") {
+                if (doençasGrupo4_Media.test(text) && isRMBH) {
+                    relevancia = "Média";
+                } else if (doençasGrupo1_Alta.test(text) && !isAmericas) {
+                    relevancia = "Média";
+                } else if (dictTermosAlertas.surto.test(text) && isBrasil) {
+                    relevancia = "Média";
+                }
+            }
+
+            return {
+                pais: locStr,
+                estado: isBrasil ? "Detectado no texto" : "Não informado",
+                municipio: isRMBH ? "Região Metropolitana BH" : "Não informado",
+                relevancia: relevancia,
+                classificacao_dae: classificacaoDAE
+            };
+        }
+
+
+        // =========================================================================
+        // LÓGICA DE EXECUÇÃO
+        // =========================================================================
 
         async function fetchEIOSData() {
             const urlFeed = inputRss.value.trim();
-            const apiKey = inputApiKey.value.trim();
-
             if (!urlFeed) return;
-            
-            if (!apiKey) {
-                showError("ERRO: É necessário inserir a Chave da API da Google (Gemini) para efetuar a triagem.");
-                return;
-            }
-
-            // Guardar a nova chave no navegador do utilizador
-            localStorage.setItem('cievs_gemini_key', apiKey);
 
             setUILoading(true);
             globalNoticias = []; 
             renderData(); 
             
             try {
-                updateStatus('A verificar ligação com a Google AI...');
-                const modelToUse = await getBestModel(apiKey);
-                
-                updateStatus('A procurar dados no EIOS...');
+                updateStatus('A descarregar dados do EIOS...');
                 let xmlText = '';
                 
                 const proxies = [
@@ -287,10 +380,10 @@
                 }
 
                 if (!xmlText) {
-                    throw new Error("Não foi possível aceder ao feed. Os servidores proxy estão bloqueados.");
+                    throw new Error("Não foi possível aceder ao feed. Verifique a sua ligação ou os servidores de proxy.");
                 }
 
-                updateStatus('A organizar formato XML...');
+                updateStatus('A ler formato XML...');
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, "text/xml");
                 const items = Array.from(xmlDoc.querySelectorAll("item, entry"));
@@ -299,9 +392,19 @@
                     throw new Error("Nenhum item encontrado no XML recebido.");
                 }
 
-                updateStatus('A remover duplicados...');
+                updateStatus('A remover duplicados (Filtro Avançado)...');
                 const uniqueItems = [];
+                
+                // Conjuntos para guardar impressões digitais das notícias e evitar repetidas
                 const titulosVistos = new Set();
+                const descricoesVistas = new Set();
+                const linksVistos = new Set();
+
+                // Função auxiliar para "limpar" o texto e facilitar a comparação (ignora pontuação e maiúsculas)
+                const criarImpressaoDigital = (texto) => {
+                    if (!texto) return "";
+                    return texto.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+                };
                 
                 for (const item of items) {
                     const titleNode = item.querySelector("title");
@@ -318,54 +421,52 @@
                     
                     const cleanDesc = description.replace(/(<([^>]+)>)/gi, "").substring(0, 500);
 
-                    if (!titulosVistos.has(title)) {
-                        titulosVistos.add(title);
+                    // Criar impressões digitais do Título e da Descrição (usamos as primeiras 100 letras da descrição)
+                    const titleFingerprint = criarImpressaoDigital(title);
+                    const descFingerprint = criarImpressaoDigital(cleanDesc.substring(0, 100));
+
+                    // Verifica se o link, o título ou a descrição já existem na nossa lista
+                    const isDuplicado = (link && linksVistos.has(link)) || 
+                                        (titleFingerprint && titulosVistos.has(titleFingerprint)) || 
+                                        (descFingerprint.length > 20 && descricoesVistas.has(descFingerprint));
+
+                    if (!isDuplicado) {
+                        // Regista esta notícia como "vista" para bloquear as próximas iguais
+                        if (link) linksVistos.add(link);
+                        if (titleFingerprint) titulosVistos.add(titleFingerprint);
+                        if (descFingerprint.length > 20) descricoesVistas.add(descFingerprint);
+                        
+                        // Executa a classificação e tradução local
+                        const classificacao = classificarNoticiaLocal(title, cleanDesc);
+                        
+                        const tituloTraduzido = traduzirTextoLocal(title);
+                        const descTraduzida = traduzirTextoLocal(cleanDesc);
+
                         uniqueItems.push({
                             id: Math.random().toString(36).substr(2, 9),
-                            tituloOriginal: title,
+                            tituloOriginal: title, 
+                            descricaoOriginal: cleanDesc,
+                            titulo_pt: tituloTraduzido, // Substituto da tradução por IA
+                            resumo_pt: descTraduzida.substring(0, 300) + '...', // Substituto da tradução por IA
                             link: link,
                             data: new Date(pubDate).toLocaleString('pt-PT'),
                             timestamp: new Date(pubDate).getTime(), 
-                            descricaoOriginal: cleanDesc
+                            pais: classificacao.pais,
+                            estado: classificacao.estado,
+                            municipio: classificacao.municipio,
+                            relevancia: classificacao.relevancia,
+                            classificacao_dae: classificacao.classificacao_dae
                         });
                     }
                 }
 
-                const totalLotes = Math.ceil(uniqueItems.length / CHUNK_SIZE);
+                globalNoticias = uniqueItems;
+                sortColumn = 'relevancia';
+                sortDirection = 'asc';
+                aplicarOrdenacao(); 
                 
-                for (let i = 0; i < uniqueItems.length; i += CHUNK_SIZE) {
-                    const lote = uniqueItems.slice(i, i + CHUNK_SIZE);
-                    const loteIndex = Math.floor(i/CHUNK_SIZE) + 1;
-                    
-                    updateStatus(`A analisar lote ${loteIndex} de ${totalLotes} (Notícias ${i + 1} a ${Math.min(i + CHUNK_SIZE, uniqueItems.length)})... Pode começar a ler a tabela!`);
-                    
-                    // Envia a chave preenchida pelo utilizador
-                    const resultadoLote = await processWithAI(lote, apiKey, modelToUse, loteIndex, totalLotes);
-                    
-                    if (resultadoLote && Array.isArray(resultadoLote)) {
-                        const noticiasLote = resultadoLote.map(iaData => {
-                            const original = uniqueItems.find(n => n.id === iaData.id);
-                            return { ...original, ...iaData };
-                        });
+                updateStatus('Concluído! Notícias classificadas com sucesso.');
 
-                        globalNoticias = globalNoticias.concat(noticiasLote);
-                        
-                        sortColumn = 'relevancia';
-                        sortDirection = 'asc';
-                        aplicarOrdenacao(); 
-                    } else {
-                        throw new Error(`Falha crítica na devolução de dados pela IA no lote ${loteIndex}.`);
-                    }
-
-                    if (i + CHUNK_SIZE < uniqueItems.length) {
-                        // Aumentámos a pausa entre pedidos para 6 segundos para não ultrapassar limites
-                        updateStatus(`Pausa de segurança de 6s para proteger os limites da sua conta Google...`);
-                        await new Promise(resolve => setTimeout(resolve, 6000));
-                    }
-                }
-                
-                updateStatus('Concluído! Todas as notícias foram carregadas.');
-                
                 setTimeout(() => {
                     if(!btnFetch.disabled) statusContainer.classList.add('hidden');
                 }, 3000);
@@ -376,153 +477,6 @@
             } finally {
                 setUILoading(false);
             }
-        }
-
-        async function processWithAI(items, key, model, loteIndex, totalLotes) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-
-            const schema = {
-                type: "OBJECT",
-                properties: {
-                    resultados: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                id: { type: "STRING" },
-                                titulo_pt: { type: "STRING" },
-                                resumo_pt: { type: "STRING" },
-                                pais: { type: "STRING" },
-                                estado: { type: "STRING" },
-                                municipio: { type: "STRING" },
-                                relevancia: { type: "STRING" },
-                                classificacao_dae: { type: "STRING" }
-                            },
-                            required: ["id", "titulo_pt", "resumo_pt", "pais", "estado", "municipio", "relevancia", "classificacao_dae"]
-                        }
-                    }
-                },
-                required: ["resultados"]
-            };
-
-            const promptText = `
-                Você é um especialista em inteligência epidemiológica do CIEVS Contagem, Minas Gerais, Brasil.
-                Sua tarefa é analisar os rumores de saúde listados abaixo e extrair informações em formato JSON.
-                
-                ATENÇÃO: Responda APENAS com um objeto JSON válido contendo um array chamado "resultados". Não use Markdown.
-
-                Para cada item:
-                1. Mantenha o "id" idêntico ao fornecido.
-                2. Traduza o título e crie um resumo curto e direto em Português do Brasil (MÁXIMO 2 FRASES, SEJA MUITO RESUMIDO) para o campo "resumo_pt".
-                3. Identifique a localização do evento reportado ("pais", "estado", "municipio"). Se não for possível identificar algum deles, escreva "Não informado".
-                4. Classifique a "relevância" epidemiológica do evento estritamente como "Alta", "Média" ou "Baixa", utilizando EXATAMENTE os seguintes critérios:
-                   
-                   - ALTA Relevância (deve atender a uma das 3 condições abaixo):
-                     1. Menções aos termos MPox, Rubéola, Sarampo, Coqueluche, COVID19, Ebola, Marburg, Hantavirose, Lassa, Febre Amarela, Arenavirus ou Febre Tifoide E ocorrendo na região das Américas.
-                     2. Menções aos termos Arboviroses, Zika, Chikungunya, Oropouche, Nilo Ocidental, Mayaro, Dengue, Ilheus, Escarlatina, Varicela, Mão pé boca, Síndrome Gripal, Síndrome respiratória aguda grave, Influenza, VSR, Rinovírus, Meningite, Raiva humana, Tétano, Poliomielite, Febre maculosa, Leptospirose, Malária ou Botulismo E ocorrendo na Região Metropolitana de Belo Horizonte (RMBH).
-                     3. Menções aos termos "Epidemia" ou "Pandemia" E ocorrendo no Brasil.
-                   
-                   - MÉDIA Relevância (deve atender a uma das 3 condições abaixo):
-                     1. Menções a DDA, Intoxicação alimentar, Hepatite, Cólera, Esporotricose, Chagas, Inundações ou Ondas de calor E ocorrendo na Região Metropolitana de Belo Horizonte (RMBH).
-                     2. Menções aos termos MPox, Rubéola, Sarampo, Coqueluche, COVID19, Ebola, Marburg, Hantavirose, Lassa, Febre Amarela, Arenavirus ou Febre Tifoide E ocorrendo em outros locais do mundo diferente da região das Américas.
-                     3. Menções ao termo "Surto" E ocorrendo no Brasil.
-                   
-                   - BAIXA Relevância:
-                     Qualquer evento que não se enquadre rigorosamente nos critérios de Alta ou Média relevância.
-
-                5. Preencha o campo "classificacao_dae" classificando a Doença, Agravo ou Evento utilizando EXATAMENTE a seguinte lógica:
-                   - ARBOVIROSES: Chikungunya; Dengue; Febre do Mayaro; Febre do Nilo Ocidental; Febre do Oropouche; Vírus Ilhéus; Zika.
-                   - DOENÇAS EXANTEMÁTICAS: Escarlatina; MPox; Rubéola; Sarampo; Varicela; Mão pé Boca.
-                   - DOENÇAS RESPIRATÓRIAS: Coqueluche; COVID19; Síndrome Gripal e SRAG; Influenza e VSR; Difteria.
-                   - DOENÇAS NEURO INVASIVAS: Meningites Virais e Bacterianas; Raiva humana; Tétano; Síndrome da Paralisia Flácida Aguda; Poliomielite por poliovírus selvagem.
-                   - FEBRES HEMORRAGICAS: Febre Maculosa; Leptospirose; Hantavirose; Ebola; Vírus Marburg; Malária; Hepatite (exceto A); Lassa; Febre Amarela; Arenavírus; Febre Tifoide.
-                   - DOENÇAS DE TRANSMISSÃO HÍDRICA E ALIMENTAR: Cólera; Botulismo; DDA; Hepatite A; Intoxicação alimentar (Surto).
-                   - ZOONOSES: Esporotricose; Doença de Chagas Aguda; Acidentes por animais peçonhentos; Peste.
-                   - EVENTOS DE IMPORTÂNCIA EM SAÚDE PÚBLICA: Inundações; Ondas de Calor; Violência sexual e tentativa de suicídio; Surtos gerais.
-                   - OUTROS RUMORES: Tudo o que não se enquadrar nas classificações acima.
-
-                Dados Originais (JSON):
-                ${JSON.stringify(items.map(i => ({ id: i.id, title: i.tituloOriginal, description: i.descricaoOriginal })))}
-            `;
-
-            const payload = {
-                contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { responseMimeType: "application/json", responseSchema: schema }
-            };
-
-            if (model === 'gemini-pro') {
-                delete payload.generationConfig.responseSchema;
-            }
-
-            const maxRetries = 4;
-            const delays = [3000, 5000, 8000, 15000];
-            let lastErrorMsg = "";
-
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    if (attempt > 0) {
-                        updateStatus(`Lote ${loteIndex} de ${totalLotes}: A recuperar de falha. Nova tentativa (${attempt + 1})...`);
-                    }
-
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        const errMsg = errData.error?.message || `Status ${res.status}`;
-                        
-                        if (res.status === 503 || errMsg.toLowerCase().includes('high demand')) {
-                            throw new Error(`[ALTA DEMANDA] A Google está sobrecarregada. A aguardar...`);
-                        }
-                        if (res.status === 429) {
-                            throw new Error(`[LIMITE] A Google bloqueou temporariamente por excesso de consultas. A aguardar 30s...`);
-                        }
-                        if ([400, 401, 403, 404].includes(res.status)) {
-                            throw new Error(`[ERRO FATAL] Recusa da Google: ${errMsg}`);
-                        }
-                        
-                        throw new Error(`Erro no servidor: ${errMsg}`);
-                    }
-
-                    const data = await res.json();
-                    let jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
-                    if (jsonText) {
-                        jsonText = jsonText.replace(/```json/gi, '').replace(/```/g, '').trim();
-                        const parsedData = JSON.parse(jsonText); 
-                        
-                        if (Array.isArray(parsedData)) return parsedData;
-                        if (parsedData.resultados && Array.isArray(parsedData.resultados)) return parsedData.resultados;
-                        
-                        throw new Error("Formato de resposta inválido.");
-                    }
-                    throw new Error("A IA devolveu resposta em branco.");
-                    
-                } catch (err) {
-                    lastErrorMsg = err.message;
-                    
-                    if (err.message.includes('[ERRO FATAL]')) {
-                        throw new Error(err.message); 
-                    }
-                    
-                    if (attempt < maxRetries - 1) {
-                        let waitTime = delays[attempt];
-                        // Se atingir o limite de quota da Google, forçamos o sistema a esperar 30 segundos (muito seguro)
-                        if (err.message.includes('[LIMITE]')) {
-                            waitTime = 30000;
-                            updateStatus(`Lote ${loteIndex}: Limite de conta Google atingido. A pausar durante 30 segundos para recuperar...`);
-                        } else if (err.message.includes('[ALTA DEMANDA]')) {
-                            waitTime = 10000;
-                            updateStatus(`Lote ${loteIndex}: Os servidores da Google estão ocupados. A pausar 10 segundos...`);
-                        }
-                        await new Promise(resolve => setTimeout(resolve, waitTime));
-                    }
-                }
-            }
-            throw new Error(`O Lote ${loteIndex} falhou completamente. Último motivo: ${lastErrorMsg}`);
         }
 
         function renderData() {
@@ -615,7 +569,7 @@
         function exportarParaCSV() {
             if (globalNoticias.length === 0) return;
 
-            const colunas = ['Relevancia', 'Classificacao DAE', 'Titulo Traduzido', 'Resumo', 'Pais', 'Estado', 'Municipio', 'Data de Publicacao', 'Link Original'];
+            const colunas = ['Relevancia', 'Classificacao DAE', 'Evento Original', 'Resumo', 'Localizacao Detectada', 'Estado', 'Municipio', 'Data de Publicacao', 'Link Original'];
             const linhasCsv = [colunas.join(';')];
 
             globalNoticias.forEach(item => {
@@ -637,10 +591,81 @@
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `Triagem_EIOS_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute("download", `Triagem_Local_EIOS_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        function exportarParaPDF() {
+            if (globalNoticias.length === 0) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'pt', 'a4'); // Formato Paisagem (Landscape)
+
+            // Cabeçalho do PDF
+            doc.setFontSize(16);
+            doc.setTextColor(15, 23, 42); // slate-900
+            doc.text("Monitorização EIOS - CIEVS Contagem", 40, 40);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 116, 139); // slate-500
+            doc.text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 40, 60);
+
+            // Preparar dados para a tabela - Adicionada a coluna de Link
+            const colunas = ['Relevância', 'Classificação DAE', 'Evento / Rumor Original', 'Localização Detectada', 'Data', 'Link da Notícia'];
+            const linhas = globalNoticias.map(item => [
+                item.relevancia,
+                item.classificacao_dae,
+                item.titulo_pt,
+                item.pais,
+                item.data.split(',')[0],
+                item.link
+            ]);
+
+            // Gerar Tabela Automática com estilo adaptado
+            doc.autoTable({
+                startY: 80,
+                head: [colunas],
+                body: linhas,
+                theme: 'grid',
+                styles: { 
+                    fontSize: 8, // Fonte reduzida para caber os links longos
+                    cellPadding: 4,
+                    overflow: 'linebreak' // Garante que o texto quebra de linha em links muito grandes
+                },
+                headStyles: { 
+                    fillColor: [37, 99, 235], // azul semelhante ao do botão "Procurar"
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                alternateRowStyles: {
+                    fillColor: [248, 250, 252] // slate-50 para alternância visual de linhas
+                },
+                columnStyles: {
+                    0: { cellWidth: 55, fontStyle: 'bold' },
+                    1: { cellWidth: 90 },
+                    2: { cellWidth: 'auto' }, // O Evento ocupa o espaço restante flexivelmente
+                    3: { cellWidth: 100 },
+                    4: { cellWidth: 55 },
+                    5: { cellWidth: 150, textColor: [37, 99, 235] } // Link configurado com largura fixa e cor azul
+                },
+                didParseCell: function(data) {
+                    // Adicionar cores textuais personalizadas na coluna de Relevância
+                    if (data.section === 'body' && data.column.index === 0) {
+                        if (data.cell.raw === 'Alta') {
+                            data.cell.styles.textColor = [185, 28, 28]; // vermelho
+                        } else if (data.cell.raw === 'Média') {
+                            data.cell.styles.textColor = [161, 98, 7]; // amarelo/mostarda
+                        } else {
+                            data.cell.styles.textColor = [51, 65, 85]; // cinza escuro
+                        }
+                    }
+                }
+            });
+
+            // Guardar o documento final
+            doc.save(`Relatorio_EIOS_${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
         function escapeHtml(unsafe) {
@@ -685,6 +710,7 @@
 
         btnFetch.addEventListener('click', fetchEIOSData);
         btnExport.addEventListener('click', exportarParaCSV);
+        btnExportPdf.addEventListener('click', exportarParaPDF);
         document.querySelectorAll('th[data-sort]').forEach(th => {
             th.addEventListener('click', handleSortClick);
         });
