@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitorização EIOS - CIEVS Contagem</title>
     <link rel="icon" type="image/jpeg" href="LOGO RADAR CIEVS.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Adicionando bibliotecas para exportação em PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -30,7 +29,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Monitorização EIOS</h1>
-                    <p class="text-slate-500 font-medium">CIEVS Contagem • Triagem e Tradução Local (Sem API)</p>
+                    <p class="text-slate-500 font-medium">CIEVS Contagem • Triagem Profunda de Links (Offline)</p>
                 </div>
             </div>
             
@@ -43,7 +42,7 @@
             </div>
         </header>
 
-        <!-- Configurações (Apenas RSS, Sem API Key) -->
+        <!-- Configurações (Apenas RSS) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
             <label class="flex items-center text-sm font-semibold text-slate-700 mb-2">
                 <svg class="w-4 h-4 mr-2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -69,8 +68,8 @@
         <!-- Estado Inicial -->
         <div id="empty-state" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center text-slate-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            <h2 class="text-xl font-semibold text-slate-700 mb-2">Sistema Offline Ativado</h2>
-            <p class="max-w-md mx-auto">Clique no botão "Procurar Notícias EIOS" acima. O motor interno irá cruzar milhares de palavras-chave instantaneamente para triar os rumores do EIOS.</p>
+            <h2 class="text-xl font-semibold text-slate-700 mb-2">Sistema de Leitura Profunda Ativado</h2>
+            <p class="max-w-md mx-auto">Clique no botão "Procurar Notícias EIOS". O sistema irá entrar nos links das reportagens para triar detalhes e contextos ocultos.</p>
         </div>
 
         <!-- Dashboard de Estatísticas -->
@@ -118,7 +117,7 @@
                                     <div class="flex items-center justify-center space-x-1"><span>Classificação DAE</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 min-w-[300px] cursor-pointer hover:bg-slate-200 transition-colors" data-sort="titulo_pt">
-                                    <div class="flex items-center justify-center space-x-1"><span>Evento / Rumor Original</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
+                                    <div class="flex items-center justify-center space-x-1"><span>Evento / Rumor</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
                                 </th>
                                 <th class="p-3 border border-slate-300 w-64 cursor-pointer hover:bg-slate-200 transition-colors" data-sort="pais">
                                     <div class="flex items-center justify-center space-x-1"><span>Localização Detectada</span> <span class="sort-icon text-slate-400 text-xs"></span></div>
@@ -139,17 +138,13 @@
 
     </div>
 
-    <!-- Script de Lógica Local (Sem IA/API) -->
     <script>
-        // --- CONFIGURAÇÕES GERAIS ---
         const DEFAULT_RSS_URL = 'https://eios.who.int/portal/api/api/rssfeed/1777405201197?pinned=false&token=3AC451CF-C683-4475-960B-2B6DDD5118FD';
 
-        // Estado Global
         let globalNoticias = [];
         let sortColumn = 'relevancia';
         let sortDirection = 'asc';
 
-        // Elementos do DOM
         const inputRss = document.getElementById('input-rss');
         const btnFetch = document.getElementById('btn-fetch');
         const btnExport = document.getElementById('btn-export');
@@ -203,12 +198,10 @@
         }
 
         // =========================================================================
-        // MOTOR DE TRIAGEM LOCAL E TRADUÇÃO (DICIONÁRIOS E REGEX)
+        // MOTOR DE TRIAGEM, TRADUÇÃO E SCRAPING (EXTRAÇÃO DE LINKS)
         // =========================================================================
 
-        // --- PACOTE DE TRADUÇÃO OFFLINE (INGLÊS E ESPANHOL) ---
         const dicionarioTraducao = [
-            // Doenças Epidemiológicas (Inglês)
             [/\bmeasles\b/gi, "sarampo"], [/\boutbreak\b/gi, "surto"], [/\bwhooping cough\b/gi, "coqueluche"],
             [/\bpertussis\b/gi, "coqueluche"], [/\bchickenpox\b/gi, "varicela"], [/\brabies\b/gi, "raiva"],
             [/\byellow fever\b/gi, "febre amarela"], [/\btyphoid\b/gi, "febre tifoide"], [/\bspotted fever\b/gi, "febre maculosa"],
@@ -216,13 +209,9 @@
             [/\bflu\b/gi, "gripe"], [/\bcough\b/gi, "tosse"], [/\bvirus\b/gi, "vírus"], [/\bsyndrome\b/gi, "síndrome"],
             [/\bmonkeypox\b/gi, "mpox"], [/\bdengue fever\b/gi, "dengue"], [/\bflood\b/gi, "inundação"],
             [/\bheat wave\b/gi, "onda de calor"], [/\bpoisoning\b/gi, "intoxicação"],
-
-            // Doenças Epidemiológicas (Espanhol/Castelhano)
             [/\bbrote\b/gi, "surto"], [/\bsarampi[óo]n\b/gi, "sarampo"], [/\btos ferina\b/gi, "coqueluche"],
             [/\benfermedad\b/gi, "doença"], [/\bfiebre\b/gi, "febre"], [/\bviruela\b/gi, "varíola"],
             [/\binundaci[óo]n\b/gi, "inundação"],
-
-            // Termos Gerais de Saúde e Notícias (Inglês)
             [/\bcases\b/gi, "casos"], [/\bcase\b/gi, "caso"], [/\bdeaths?\b/gi, "mortes"], [/\bhealth\b/gi, "saúde"], 
             [/\bministry\b/gi, "ministério"], [/\bwarning\b/gi, "alerta"], [/\balert\b/gi, "alerta"], 
             [/\bupdate\b/gi, "atualização"], [/\bconfirmed\b/gi, "confirmado"], [/\bsuspected\b/gi, "suspeito"], 
@@ -232,24 +221,19 @@
             [/\bspread\b/gi, "propagação"], [/\binfection\b/gi, "infecção"], [/\bvaccine\b/gi, "vacina"], 
             [/\bvaccination\b/gi, "vacinação"], [/\bpublic\b/gi, "público(a)"], [/\bdepartment\b/gi, "departamento"], 
             [/\bnumber\b/gi, "número"], [/\bmore\b/gi, "mais"], [/\bhospital\b/gi, "hospital"],
-
-            // Termos Gerais de Saúde e Notícias (Espanhol/Castelhano)
             [/\bsalud\b/gi, "saúde"], [/\bministerio\b/gi, "ministério"], [/\bconfirmados?\b/gi, "confirmados"],
             [/\bsospechosos?\b/gi, "suspeitos"], [/\bni[ñn]os\b/gi, "crianças"], [/\bpersonas\b/gi, "pessoas"],
             [/\bciudad\b/gi, "cidade"], [/\bnuevo\b/gi, "novo"], [/\bprimer\b/gi, "primeiro"],
             [/\binfecci[óo]n\b/gi, "infecção"], [/\bvacuna\b/gi, "vacina"], [/\bvacunaci[óo]n\b/gi, "vacinação"],
             [/\bp[úu]blico\b/gi, "público(a)"], [/\bp[úu]blica\b/gi, "pública"], [/\bmuertes?\b/gi, "mortes"],
-            [/\bfallecidos\b/gi, "óbitos"], [/\balerta\b/gi, "alerta"]
+            [/\bfallecidos\b/gi, "óbitos"]
         ];
 
-        // Função para traduzir o texto localmente
         function traduzirTextoLocal(texto) {
             if (!texto) return "";
             let textoTraduzido = texto;
-            
             dicionarioTraducao.forEach(([regex, substituto]) => {
                 textoTraduzido = textoTraduzido.replace(regex, (match) => {
-                    // Tenta manter a capitalização (Se for "Measles", traduz para "Sarampo")
                     if (match[0] === match[0].toUpperCase()) {
                         return substituto.charAt(0).toUpperCase() + substituto.slice(1);
                     }
@@ -259,14 +243,12 @@
             return textoTraduzido;
         }
 
-        // Dicionários Geográficos (Português e Inglês)
         const dictGeo = {
             rmbh: /\b(belo horizonte|contagem|betim|nova lima|ribeir[ãa]o das neves|santa luzia|ibirit[ée]|sabar[áa]|vespasiano|rmbh)\b/i,
             brasil: /\b(brasil|brazil|minas gerais|mg|s[ãa]o paulo|rio de janeiro|bahia|paran[áa]|cear[áa]|pernambuco|rio grande do sul|amazonas)\b/i,
             americas: /\b(usa|united states|eua|estados unidos|canada|mexico|argentina|colombia|peru|chile|ecuador|equador|bolivia|paraguay|paraguai|uruguay|uruguai|venezuela|america|am[ée]ricas?|haiti|cuba|jamaica|brazil|brasil)\b/i
         };
 
-        // Dicionários de Doenças por Categoria (Português, Inglês e Sinónimos)
         const dictDae = {
             arboviroses: /\b(chikungunya|dengue|mayaro|nilo ocidental|west nile|oropouche|ilh[ée]us|zika)\b/i,
             exantematicas: /\b(escarlatina|scarlet fever|mpox|monkeypox|rub[ée]ola|rubella|sarampo|measles|varicela|chickenpox|m[ãa]o[- ]p[ée][- ]boca|hfmd)\b/i,
@@ -286,10 +268,10 @@
         const doençasGrupo1_Alta = /\b(mpox|monkeypox|rub[ée]ola|rubella|sarampo|measles|coqueluche|whooping cough|pertussis|covid[- ]?19|ebola|marburg|hantavirose|hantavirus|lassa|febre amarela|yellow fever|arenav[íi]rus|arenavirus|febre tifoide|typhoid)\b/i;
         const doençasGrupo4_Media = /\b(dda|diarreia|diarrhea|intoxica[çc][ãa]o alimentar|food poisoning|hepatite|hepatitis|c[óo]lera|cholera|esporotricose|sporotrichosis|chagas|inunda[çc][ãa]o|flood|onda de calor|heat wave)\b/i;
 
-        function classificarNoticiaLocal(title, description) {
-            const text = `${title} ${description}`.toLowerCase();
+        function classificarNoticiaLocal(textA, textB) {
+            // Une o texto original do EIOS com o texto capturado de dentro do link da reportagem
+            const text = `${textA} ${textB}`.toLowerCase();
             
-            // 1. Deteção Geográfica
             const isRMBH = dictGeo.rmbh.test(text);
             const isBrasil = isRMBH || dictGeo.brasil.test(text);
             const isAmericas = isBrasil || dictGeo.americas.test(text);
@@ -299,7 +281,6 @@
             else if (isBrasil) locStr = "Brasil (Detectado)";
             else if (isAmericas) locStr = "Américas (Detectado)";
 
-            // 2. Classificação DAE
             let classificacaoDAE = "OUTROS RUMORES";
             if (dictDae.arboviroses.test(text)) classificacaoDAE = "ARBOVIROSES";
             else if (dictDae.exantematicas.test(text)) classificacaoDAE = "DOENÇAS EXANTEMÁTICAS";
@@ -310,14 +291,11 @@
             else if (dictDae.zoonoses.test(text)) classificacaoDAE = "ZOONOSES";
             else if (dictDae.eventos.test(text)) classificacaoDAE = "EVENTOS DE IMPORTÂNCIA EM SAÚDE PÚBLICA";
 
-            // 3. Relevância
             let relevancia = "Baixa";
             
-            // Verificações de ALTA Relevância
             if (doençasGrupo1_Alta.test(text) && isAmericas) {
                 relevancia = "Alta";
             } else if (classificacaoDAE !== "OUTROS RUMORES" && classificacaoDAE !== "DOENÇAS DE TRANSMISSÃO HÍDRICA E ALIMENTAR" && isRMBH) {
-                // Simplificação segura: Se for doença mapeada e estiver na RMBH, é Alta (exceto as do grupo 4 que são média)
                 if (!doençasGrupo4_Media.test(text)) {
                     relevancia = "Alta";
                 }
@@ -325,7 +303,6 @@
                 relevancia = "Alta";
             }
             
-            // Verificações de MÉDIA Relevância (se não for Alta)
             if (relevancia !== "Alta") {
                 if (doençasGrupo4_Media.test(text) && isRMBH) {
                     relevancia = "Média";
@@ -345,6 +322,46 @@
             };
         }
 
+        // Função Assíncrona para Entrar nos Links e Capturar o Texto da Reportagem
+        async function extrairTextoDaReportagem(url) {
+            if (!url) return "";
+            
+            const proxies = [
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+                `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`
+            ];
+
+            for (const proxy of proxies) {
+                try {
+                    // Timeout de 8 segundos para não ficar preso em sites lentos
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                    const response = await fetch(proxy, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const html = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, "text/html");
+
+                        // Limpa menus, rodapés, anúncios e foca só no texto
+                        doc.querySelectorAll('script, style, noscript, nav, header, footer, aside, form, button').forEach(el => el.remove());
+                        
+                        let text = doc.body ? doc.body.textContent : "";
+                        text = text.replace(/\s+/g, ' ').trim();
+                        
+                        // Retorna até 5000 letras do site (Suficiente para classificar com grande precisão)
+                        return text.substring(0, 5000); 
+                    }
+                } catch (e) {
+                    // Ignora bloqueios e avança para o próximo proxy
+                }
+            }
+            // Se o site blindar o acesso, devolve texto vazio para que o sistema use o resumo original
+            return "";
+        }
+
 
         // =========================================================================
         // LÓGICA DE EXECUÇÃO
@@ -359,7 +376,7 @@
             renderData(); 
             
             try {
-                updateStatus('A descarregar dados do EIOS...');
+                updateStatus('A descarregar lista de notícias do EIOS...');
                 let xmlText = '';
                 
                 const proxies = [
@@ -383,7 +400,7 @@
                     throw new Error("Não foi possível aceder ao feed. Verifique a sua ligação ou os servidores de proxy.");
                 }
 
-                updateStatus('A ler formato XML...');
+                updateStatus('A ler formato XML e a remover duplicados...');
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlText, "text/xml");
                 const items = Array.from(xmlDoc.querySelectorAll("item, entry"));
@@ -392,15 +409,11 @@
                     throw new Error("Nenhum item encontrado no XML recebido.");
                 }
 
-                updateStatus('A remover duplicados (Filtro Avançado)...');
-                const uniqueItems = [];
-                
-                // Conjuntos para guardar impressões digitais das notícias e evitar repetidas
+                // Fase 1: Guardar apenas os links únicos antes de abrir os sites (Poupa muito tempo)
+                const noticiasUnicas = [];
                 const titulosVistos = new Set();
-                const descricoesVistas = new Set();
                 const linksVistos = new Set();
 
-                // Função auxiliar para "limpar" o texto e facilitar a comparação (ignora pontuação e maiúsculas)
                 const criarImpressaoDigital = (texto) => {
                     if (!texto) return "";
                     return texto.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -418,54 +431,71 @@
                     
                     const descNode = item.querySelector("description, summary, content");
                     const description = descNode ? descNode.textContent : "";
-                    
                     const cleanDesc = description.replace(/(<([^>]+)>)/gi, "").substring(0, 500);
 
-                    // Criar impressões digitais do Título e da Descrição (usamos as primeiras 100 letras da descrição)
                     const titleFingerprint = criarImpressaoDigital(title);
-                    const descFingerprint = criarImpressaoDigital(cleanDesc.substring(0, 100));
 
-                    // Verifica se o link, o título ou a descrição já existem na nossa lista
-                    const isDuplicado = (link && linksVistos.has(link)) || 
-                                        (titleFingerprint && titulosVistos.has(titleFingerprint)) || 
-                                        (descFingerprint.length > 20 && descricoesVistas.has(descFingerprint));
-
-                    if (!isDuplicado) {
-                        // Regista esta notícia como "vista" para bloquear as próximas iguais
+                    if ((!link || !linksVistos.has(link)) && (!titleFingerprint || !titulosVistos.has(titleFingerprint))) {
                         if (link) linksVistos.add(link);
                         if (titleFingerprint) titulosVistos.add(titleFingerprint);
-                        if (descFingerprint.length > 20) descricoesVistas.add(descFingerprint);
-                        
-                        // Executa a classificação e tradução local
-                        const classificacao = classificarNoticiaLocal(title, cleanDesc);
-                        
-                        const tituloTraduzido = traduzirTextoLocal(title);
-                        const descTraduzida = traduzirTextoLocal(cleanDesc);
 
-                        uniqueItems.push({
+                        noticiasUnicas.push({ title, link, pubDate, cleanDesc });
+                    }
+                }
+
+                // Fase 2: Visitar os links das reportagens ativamente (Processamento em pequenos lotes)
+                const LOTE_TAMANHO = 6; // Pequeno para não travar o navegador
+                const totalNoticias = noticiasUnicas.length;
+
+                for (let i = 0; i < totalNoticias; i += LOTE_TAMANHO) {
+                    const loteAtual = noticiasUnicas.slice(i, i + LOTE_TAMANHO);
+                    const numLote = Math.floor(i / LOTE_TAMANHO) + 1;
+                    const totalLotes = Math.ceil(totalNoticias / LOTE_TAMANHO);
+                    
+                    updateStatus(`A abrir reportagens (Lote ${numLote} de ${totalLotes}). Lendo sites originais...`);
+
+                    // Promessas concorrentes: Lê 6 sites de uma só vez
+                    const promessasLote = loteAtual.map(async (noticia) => {
+                        // Faz o Download do texto do site da notícia!
+                        const textoDaReportagem = await extrairTextoDaReportagem(noticia.link);
+                        
+                        // Classifica unindo o Título/Resumo + o Texto Longo Extraído do Link
+                        const classificacao = classificarNoticiaLocal(noticia.title + " " + noticia.cleanDesc, textoDaReportagem);
+                        
+                        const tituloTraduzido = traduzirTextoLocal(noticia.title);
+                        const descTraduzida = traduzirTextoLocal(noticia.cleanDesc);
+
+                        return {
                             id: Math.random().toString(36).substr(2, 9),
-                            tituloOriginal: title, 
-                            descricaoOriginal: cleanDesc,
-                            titulo_pt: tituloTraduzido, // Substituto da tradução por IA
-                            resumo_pt: descTraduzida.substring(0, 300) + '...', // Substituto da tradução por IA
-                            link: link,
-                            data: new Date(pubDate).toLocaleString('pt-PT'),
-                            timestamp: new Date(pubDate).getTime(), 
+                            tituloOriginal: noticia.title, 
+                            descricaoOriginal: noticia.cleanDesc,
+                            titulo_pt: tituloTraduzido, 
+                            resumo_pt: descTraduzida.substring(0, 300) + '...',
+                            link: noticia.link,
+                            data: new Date(noticia.pubDate).toLocaleString('pt-BR'),
+                            timestamp: new Date(noticia.pubDate).getTime(), 
                             pais: classificacao.pais,
                             estado: classificacao.estado,
                             municipio: classificacao.municipio,
                             relevancia: classificacao.relevancia,
                             classificacao_dae: classificacao.classificacao_dae
-                        });
+                        };
+                    });
+
+                    // Espera que as 6 reportagens sejam lidas e classifica
+                    const resultadosProcessados = await Promise.all(promessasLote);
+                    
+                    // Adiciona as novas lidas e mostra na tabela instantaneamente
+                    globalNoticias = globalNoticias.concat(resultadosProcessados);
+                    aplicarOrdenacao();
+
+                    // Pausa ligeira para não sofrer bloqueio nos proxies
+                    if (i + LOTE_TAMANHO < totalNoticias) {
+                        await new Promise(r => setTimeout(r, 1500));
                     }
                 }
-
-                globalNoticias = uniqueItems;
-                sortColumn = 'relevancia';
-                sortDirection = 'asc';
-                aplicarOrdenacao(); 
                 
-                updateStatus('Concluído! Notícias classificadas com sucesso.');
+                updateStatus('Concluído! Todos os sites das reportagens foram analisados.');
 
                 setTimeout(() => {
                     if(!btnFetch.disabled) statusContainer.classList.add('hidden');
@@ -613,7 +643,7 @@
             doc.text(`Relatório gerado em: ${new Date().toLocaleString('pt-BR')}`, 40, 60);
 
             // Preparar dados para a tabela - Adicionada a coluna de Link
-            const colunas = ['Relevância', 'Classificação DAE', 'Evento / Rumor Original', 'Localização Detectada', 'Data', 'Link da Notícia'];
+            const colunas = ['Relevância', 'Classificação DAE', 'Evento / Rumor Traduzido', 'Localização Detectada', 'Data', 'Link da Notícia'];
             const linhas = globalNoticias.map(item => [
                 item.relevancia,
                 item.classificacao_dae,
